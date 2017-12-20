@@ -9,14 +9,15 @@ using Newtonsoft.Json;
 
 namespace USATTInspector
 {
-    public class Player {
-       public long USATTID { get; set; }
-       public string PictureURL { get; set; }
-       public string Profile { get; set; }
-       public string Name { get; set;}
-       public string Location { get; set; }
-       public int Rating { get; set; }
-       public string Date { get; set; }              
+    public class Player
+    {
+        public long USATTID { get; set; }
+        public string PictureURL { get; set; }
+        public string Profile { get; set; }
+        public string Name { get; set; }
+        public string Location { get; set; }
+        public int Rating { get; set; }
+        public string Date { get; set; }
     }
 
     class Inspector
@@ -107,11 +108,11 @@ namespace USATTInspector
             }
             catch (Exception e)
             {
-                Console.SetOut(_fileOutput);
-                Console.WriteLine(">>> An error has ocurred. Exception: " + e.Message);
-                Console.WriteLine(string.Format(">>> Query index: {0}, Page index: {1}.", i, pageIndex));
-                Console.SetOut(_consoleOutput);
-                
+                //Console.SetOut(_fileOutput);
+                //Console.WriteLine(">>> An error has ocurred. Exception: " + e.Message);
+                //Console.WriteLine(string.Format(">>> Query index: {0}, Page index: {1}.", i, pageIndex));
+                //Console.SetOut(_consoleOutput);
+
                 Console.WriteLine(">>> An error has ocurred. Exception: " + e.Message);
                 Console.WriteLine(string.Format(">>> Query index: {0}, Page index: {1}.", i, pageIndex));
                 Console.WriteLine(">>> Continue reading...");
@@ -122,6 +123,8 @@ namespace USATTInspector
 
         private static void ReadRecords(WebPage page)
         {
+            Console.SetOut(_fileOutput);
+
             string profileRelativeUrl;
             int iFirst;
             int iLast;
@@ -131,7 +134,7 @@ namespace USATTInspector
             int rating;
             long usattNumber;
             string expirationDate;
-            Console.SetOut(_fileOutput);
+            List<Player> players = new List<Player>();
             foreach (HtmlNode item in page.Html.CssSelect(".list-area .list-item"))
             {
                 #region Profile Relative Url
@@ -142,18 +145,18 @@ namespace USATTInspector
                 #endregion
 
                 #region Picture Relative Url
-                pictureRelativeUrl = item.CssSelect("img.backup_picture").First().GetAttributeValue("src");
+                pictureRelativeUrl = item.CssSelect("img.profile-photo").First().GetAttributeValue("src");
                 #endregion
 
                 #region Name | Location| Rating | USATT Number | Exp. Date
                 List<HtmlNode> columns = item.CssSelect(".list-column").ToList();
-                name = columns[0].InnerText.Trim();
+                name = columns[0].CssSelect(".img-text a").Single().InnerText.Trim();
                 location = RemoveWhitespaces(columns[1].InnerText);
                 rating = 0;
                 if (!string.IsNullOrWhiteSpace(columns[2].InnerText))
                     rating = int.Parse(columns[2].InnerText.Trim());
                 usattNumber = 0;
-                if (!string.IsNullOrWhiteSpace(columns[3].InnerText)) 
+                if (!string.IsNullOrWhiteSpace(columns[3].InnerText))
                     usattNumber = long.Parse(columns[3].InnerText.Trim());
                 expirationDate = columns[4].InnerText.Trim();
                 #endregion
@@ -162,8 +165,9 @@ namespace USATTInspector
                 if (usattNumber > 0 && !_usattNumbers.Contains(usattNumber))
                 {
                     _usattNumbers.Add(usattNumber);
-                    List<Player> _player = new List<Player>();
-                    _player.Add(new Player() {
+                    players = new List<Player>();
+                    players.Add(new Player()
+                    {
                         USATTID = usattNumber,
                         Profile = profileRelativeUrl,
                         PictureURL = pictureRelativeUrl,
@@ -172,24 +176,21 @@ namespace USATTInspector
                         Rating = rating,
                         Date = expirationDate
                     });
-                    
-                    string json = JsonConvert.SerializeObject(_player.ToArray(), Formatting.Indented);
-
-                    //write string to file
-                    System.IO.File.AppendAllText(@"D:\UsattData.txt", json);
-
-                    Console.WriteLine(string.Format("Profile: {0}|Pic: {1}|Name: {2}|Location: {3}|Rating: {4}|USATT#: {5}|Exp. Date: {6}.", profileRelativeUrl, pictureRelativeUrl, name, location, rating, usattNumber, expirationDate));
+                    //Console.WriteLine(string.Format("Profile: {0}|Pic: {1}|Name: {2}|Location: {3}|Rating: {4}|USATT#: {5}|Exp. Date: {6}.", profileRelativeUrl, pictureRelativeUrl, name, location, rating, usattNumber, expirationDate));
                 }
                 #endregion
             }
+            string playersAsAHugeJson = JsonConvert.SerializeObject(players.ToArray(), Formatting.Indented);
+            Console.WriteLine(playersAsAHugeJson);
+
             Console.SetOut(_consoleOutput);
         }
 
         private static string RemoveWhitespaces(string text)
         {
-            if(text.Contains(","))
+            if (text.Contains(","))
             {
-                string[] split = text.Split(new string[]{","}, StringSplitOptions.RemoveEmptyEntries);
+                string[] split = text.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
                 split[0] = split[0].Trim();
                 for (int i = 1; i < split.Length; i++)
                 {
